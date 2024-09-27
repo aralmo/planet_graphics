@@ -1,57 +1,57 @@
 ﻿global using Raylib_cs;
 global using System.Numerics;
 global using static Raylib_cs.Raylib;
-internal class Program
+internal partial class Program
 {
     private static unsafe void Main(string[] args)
     {
         InitWindow(1000, 1000, "sim");
         Camera3D camera = new Camera3D();
-        camera.Position = new Vector3(0.0f, 2.0f, -10.0f);    // Camera position
-        camera.Target = new Vector3(0f, 0f, 0f);      // Camera looking at point
-        camera.Up = new Vector3(0.0f, 1.0f, 0.0f);          // Camera up vector (rotation towards target)
-        camera.FovY = 60.0f;                                // Camera field-of-view Y
-        camera.Projection = CameraProjection.Perspective;             // Camera projection type
+        camera.Position = new Vector3(0.0f,0f, -5.0f);
+        camera.Target = new Vector3(0f, 0f, 0f);
+        camera.Up = new Vector3(0.0f, 1.0f, 0.0f);
+        camera.FovY = 60.0f;                              
+        camera.Projection = CameraProjection.Perspective;  
 
-        // Generate a random height map
-        Image heightMap = GenImagePerlinNoise(256, 256, 0, 0, 8.0f);
-        Texture2D heightMapTexture = LoadTextureFromImage(heightMap);
+        PlanetGenerationSettings[] planetSettings = new PlanetGenerationSettings[]
+        {
+            PlanetSettings.EarthLike,
+            PlanetSettings.Moon,
+            PlanetSettings.MarsLike,
+            PlanetSettings.VenusLike,
+            PlanetSettings.IcePlanet,
+            PlanetSettings.LavaPlanet
+        };
 
-        // Generate the icosphere mesh
-        Mesh icosphereMesh = Icosphere.GenerateIcosphere(3, 1.0f, heightMap);
-        Model icosphereModel = LoadModelFromMesh(icosphereMesh);
-
-        // Define a light
-        Light light = new Light();
-        light.Position = new Vector3(0.0f, 10.0f, -10.0f);
-        light.Target = new Vector3(0.0f, 0.0f, 0.0f);
-        light.Color = Color.White;
-
+        int currentPlanetIndex = 0;
+        var planet = PlanetGenerator.GeneratePlanet(planetSettings[currentPlanetIndex]);
+        float rotationAngle = 0.0f;
+        float cameraDistance = 5.0f; // Closer camera distance
+        SetTargetFPS(60);
         while (!WindowShouldClose())
         {
+            if (IsKeyDown(KeyboardKey.Right))
+            {
+                rotationAngle -= 0.05f;
+            if (IsKeyDown(KeyboardKey.Left))
+            {
+                rotationAngle += 0.05f;
+            }
+            if (IsKeyPressed(KeyboardKey.Space))
+            {
+                currentPlanetIndex = (currentPlanetIndex + 1) % planetSettings.Length;
+                planet = PlanetGenerator.GeneratePlanet(planetSettings[currentPlanetIndex]);
+            }
+            cameraDistance += GetMouseWheelMove() * 0.5f; // Adjust this value to control the zoom speed
+            camera.Position.X = MathF.Sin(rotationAngle) * cameraDistance;
+            camera.Position.Z = MathF.Cos(rotationAngle) * cameraDistance;
             BeginDrawing();
             ClearBackground(Color.Black);
             BeginMode3D(camera);
-
-            // Draw the planet
-            DrawModel(icosphereModel, Vector3.Zero, 1.0f, Color.White);
-
-            // Draw the light source
-            DrawSphere(light.Position, 0.2f, Color.Yellow);
-
+            DrawModel(planet, Vector3.Zero, 1.0f, Color.White);
             EndMode3D();
             EndDrawing();
         }
-
-        UnloadTexture(heightMapTexture);
-        UnloadModel(icosphereModel);
         CloseWindow();
-    }
-
-    private struct Light
-    {
-        public Vector3 Position;
-        public Vector3 Target;
-        public Color Color;
     }
 }
